@@ -338,12 +338,12 @@ def simulate_with_spell_system_graph(
     hp_multiplier = {1: 1.0, 2: 1.8, 3: 3.24}[star_level]
     max_hp = base_hp * hp_multiplier
 
-    enhanced_hp, armor, mr, basic_reduction, _, hp_percent_bonus, attack_speed_bonus = apply_selected_buffs(
+    enhanced_max_hp, armor, mr, basic_reduction, _, hp_percent_bonus, attack_speed_bonus = apply_selected_buffs(
         base_hp * hp_multiplier, base_armor, base_mr, max_hp, fight_time,
         items, traits, name, signature_hex, is_street_demon
     )
     attack_speed *= (1 + attack_speed_bonus)
-    hp = enhanced_hp
+    hp = enhanced_max_hp
 
     heal_per_sec = 0.0
     active_shield = 0.0
@@ -366,14 +366,15 @@ def simulate_with_spell_system_graph(
             mana_locked_until = 0.0
 
         _, _, _, temp_durability, temp_shield, _, _ = get_trait_bonuses(
-            name, traits, time_sec, enhanced_hp, active_shield > 0, signature_hex, is_street_demon
+            name, traits, time_sec, enhanced_max_hp, active_shield > 0, signature_hex, is_street_demon
         )
         durability_reduction = 1.0 - temp_durability
 
         if tick % attack_interval_ticks == 0:
             if time_sec >= mana_locked_until:
                 mana += 10
-
+        print("hp before damage")
+        print("hp")
         for i, dmg_type in enumerate(["physical", "magic", "true"]):
             pre_dmg = damage_per_basic * damage_ratio[i]
             dmg = pre_dmg
@@ -407,30 +408,31 @@ def simulate_with_spell_system_graph(
             hp -= dmg
             if time_sec >= mana_locked_until:
                 mana += 0.01 * pre_dmg + 0.07 * dmg
-
+        print("hp after damage")
+        print(hp)
         if items and "DragonsClaw" in items and tick % (2000 // tick_interval_ms) == 0:
-            hp += 0.025 * enhanced_hp
+            hp += 0.025 * enhanced_max_hp
         if items and "Redemption" in items and tick % (5000 // tick_interval_ms) == 0:
-            missing_hp = max(0, enhanced_hp - hp)
+            missing_hp = max(0, enhanced_max_hp - hp)
             hp += 0.15 * missing_hp
 
-        hp += heal_per_sec * tick_interval_s
+        #hp += heal_per_sec * tick_interval_s/1000
 
         if mana >= mana_max:
             casts += 1
             mana = 0
-            hp, effect = cast_spell(name, star_level, hp, enhanced_hp, ap_bonus, hp_percent_bonus)
+            hp, effect = cast_spell(name, star_level, hp, enhanced_max_hp, ap_bonus, hp_percent_bonus)
             if effect:
                 active_shield = effect['shield']
                 durability_reduction = effect['durability_reduction']
                 flat_reduction = effect['flat_damage_reduction']
                 heal_per_sec = effect['heal_per_second']
-                if effect['new_max_hp'] > enhanced_hp:
-                    enhanced_hp = effect['new_max_hp']
+                if effect['new_max_hp'] > enhanced_max_hp:
+                    enhanced_max_hp = effect['new_max_hp']
                 if effect['duration'] > 0:
                     mana_locked_until = time_sec + effect['duration']
 
-        hp = min(hp, enhanced_hp)
+        hp = min(hp, enhanced_max_hp)
         hp_log.append(max(hp, 0))
         if hp <= 0:
             break
@@ -447,16 +449,14 @@ def simulate_with_spell_system_graph(
     plt.show()
 
     return times[-1], casts
-
-# Execute and plot for Shyvana
 simulate_with_spell_system_graph(
     name="Shyvana",
     star_level=3,
     ap_bonus=0,
-    dps=600,
+    dps=10000,
     fight_time=30,
     damage_ratio=[0.5, 0.25, 0.25],
     source_ratio=[0.3, 0.7],
-    items=["DragonsClaw", "BrambleVest", "Redemption"],
+    items=[],  # No defenses
     traits={"Bastion": 2}
 )
