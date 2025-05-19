@@ -113,7 +113,7 @@ def get_trait_bonuses(
     if name in syndicate_champions:
         synd_hp_bonus = {3: 100, 5: 400, 7: 500}.get(traits.get("Syndicate", 0), 0)
         flat_hp_bonus += synd_hp_bonus
-
+        
     return flat_hp_bonus, percent_hp_bonus, bonus_armor, bonus_mr, bonus_durability, bonus_shield, bonus_attack_speed
 
 def apply_selected_buffs(base_hp, armor, mr, max_hp, time, items=None, traits=None, name=None, signature_hex=False, is_street_demon=False):
@@ -338,7 +338,7 @@ def simulate_with_spell_system_graph(
     hp_multiplier = {1: 1.0, 2: 1.8, 3: 3.24}[star_level]
     max_hp = base_hp * hp_multiplier
 
-    enhanced_max_hp, armor, mr, basic_reduction, _, hp_percent_bonus, attack_speed_bonus = apply_selected_buffs(
+    enhanced_max_hp, armor, mr, basic_reduction, bonus_durability, hp_percent_bonus, attack_speed_bonus = apply_selected_buffs(
         base_hp * hp_multiplier, base_armor, base_mr, max_hp, fight_time,
         items, traits, name, signature_hex, is_street_demon
     )
@@ -365,16 +365,10 @@ def simulate_with_spell_system_graph(
         if time_sec >= mana_locked_until and active_shield <= 0:
             mana_locked_until = 0.0
 
-        _, _, _, temp_durability, temp_shield, _, _ = get_trait_bonuses(
-            name, traits, time_sec, enhanced_max_hp, active_shield > 0, signature_hex, is_street_demon
-        )
-        durability_reduction = 1.0 - temp_durability
-
+        durability_reduction = 1.0 - bonus_durability
         if tick % attack_interval_ticks == 0:
             if time_sec >= mana_locked_until:
                 mana += 10
-        print("hp before damage")
-        print("hp")
         for i, dmg_type in enumerate(["physical", "magic", "true"]):
             pre_dmg = damage_per_basic * damage_ratio[i]
             dmg = pre_dmg
@@ -384,6 +378,7 @@ def simulate_with_spell_system_graph(
                 dmg = calc_effective_damage(dmg, mr)
             dmg *= (1 - basic_reduction) * durability_reduction
             dmg = max(dmg - flat_reduction, 0)
+            
             if active_shield > 0:
                 absorbed = min(dmg, active_shield)
                 active_shield -= absorbed
@@ -408,8 +403,7 @@ def simulate_with_spell_system_graph(
             hp -= dmg
             if time_sec >= mana_locked_until:
                 mana += 0.01 * pre_dmg + 0.07 * dmg
-        print("hp after damage")
-        print(hp)
+        
         if items and "DragonsClaw" in items and tick % (2000 // tick_interval_ms) == 0:
             hp += 0.025 * enhanced_max_hp
         if items and "Redemption" in items and tick % (5000 // tick_interval_ms) == 0:
