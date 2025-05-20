@@ -38,10 +38,9 @@ vanguard_champions = {"Sylas", "Vi", "Rhaast", "Skarner", "Braum", "Jarvan IV", 
 bruiser_champions = {"Alistar", "Dr Mundo", "Darius", "Gragas", "Mordekaiser", "Chogath", "Kobuko"}
 anima_champions = {"Seraphine", "Sylas", "Illaoi", "Vayne", "Yuumi", "Leona", "Xayah", "Aurora"}
 exotech_champions = {"Jax", "Jhin", "Naafiri", "Mordekaiser", "Varus", "Sejuani", "Zeri"}
-painted_champions = {"Dr Mundo", "Zyra", "Ekko", "Jinx", "Rengar", "Brand", "Neeko"}
+street_demon_champions = {"Dr Mundo", "Zyra", "Ekko", "Jinx", "Rengar", "Brand", "Neeko"}
 syndicate_champions = {"Shaco", "Darius", "Twisted Fate", "Braum", "Miss Fortune"}
-
-# Re-define get_trait_bonuses
+# Update the get_trait_bonuses function to handle the bastion time-scaling
 def get_trait_bonuses(
     name: str,
     traits: dict,
@@ -62,24 +61,23 @@ def get_trait_bonuses(
     bastion_tiers = {2: 18, 4: 40, 6: 70}
     bastion_base = bastion_tiers.get(traits.get("Bastion", 0), 0)
     if name in bastion_champions:
+        # Apply 2x bonus until 10 seconds
         scale = 2.0 if current_time <= 10 else 1.0
         bonus_armor += bastion_base * scale
         bonus_mr += bastion_base * scale
-    elif traits.get("Bastion", 0) == 6:
-        bonus_armor += 30
-        bonus_mr += 30
-    else:
-        bonus_armor += 10
-        bonus_mr += 10
-
-    if name in vanguard_champions and shield_active:
-        vanguard_durability = {2: 0.16, 4: 0.32, 6: 0.40}.get(traits.get("Vanguard", 0), 0)
-        bonus_durability += vanguard_durability
+    elif traits.get("Bastion", 0) >= 2:
+        # Non-bastion champions still get a smaller bonus
+        if traits.get("Bastion", 0) == 6:
+            bonus_armor += 30
+            bonus_mr += 30
+        else:
+            bonus_armor += 10
+            bonus_mr += 10
 
     if name in vanguard_champions:
-        shield_pct = {2: 0.16, 4: 0.32, 6: 0.40}.get(traits.get("Vanguard", 0), 0)
-        if current_time <= 10:
-            bonus_shield += shield_pct * max_hp
+        if shield_active:
+            vanguard_durability = {2: 0.12, 4: 0.12, 6: 0.18}.get(traits.get("Vanguard", 0), 0)
+            bonus_durability += vanguard_durability
 
     bruiser_scaling = {2: 0.20, 4: 0.45, 6: 0.70}
     if name in bruiser_champions:
@@ -101,21 +99,83 @@ def get_trait_bonuses(
         flat_hp_bonus += exotech_hp_bonus * 3
         bonus_attack_speed += exotech_as_bonus * 3
 
-    if name in painted_champions:
+    if name in street_demon_champions:
         scale = 1.0
         if signature_hex:
             scale *= 1.5
         if is_street_demon:
             scale *= 2.0
-        painted_hp_bonus = {3: 0.06, 5: 0.10, 7: 0.16, 10: 0.45}.get(traits.get("Painted Hex", 0), 0)
-        percent_hp_bonus += painted_hp_bonus * scale
+        street_demon_hp_bonus = {3: 0.06, 5: 0.10, 7: 0.16, 10: 0.45}.get(traits.get("street_demon Hex", 0), 0)
+        percent_hp_bonus += street_demon_hp_bonus * scale
 
     if name in syndicate_champions:
         synd_hp_bonus = {3: 100, 5: 400, 7: 500}.get(traits.get("Syndicate", 0), 0)
         flat_hp_bonus += synd_hp_bonus
-        
+
     return flat_hp_bonus, percent_hp_bonus, bonus_armor, bonus_mr, bonus_durability, bonus_shield, bonus_attack_speed
 
+# Add a new function to calculate team traits from a list of champions
+def calculate_team_traits(champion_list):
+    traits = {}
+    
+    # Count the traits
+    bastion_count = sum(1 for champ in champion_list if champ in bastion_champions)
+    vanguard_count = sum(1 for champ in champion_list if champ in vanguard_champions)
+    bruiser_count = sum(1 for champ in champion_list if champ in bruiser_champions)
+    anima_count = sum(1 for champ in champion_list if champ in anima_champions)
+    exotech_count = sum(1 for champ in champion_list if champ in exotech_champions)
+    street_demon_count = sum(1 for champ in champion_list if champ in street_demon_champions)
+    syndicate_count = sum(1 for champ in champion_list if champ in syndicate_champions)
+    
+    # Add active traits to dictionary
+    if bastion_count >= 2:
+        traits["Bastion"] = 6 if bastion_count >= 6 else 4 if bastion_count >= 4 else 2
+    
+    if vanguard_count >= 2:
+        traits["Vanguard"] = 6 if vanguard_count >= 6 else 4 if vanguard_count >= 4 else 2
+    
+    if bruiser_count >= 2:
+        traits["Bruiser"] = 6 if bruiser_count >= 6 else 4 if bruiser_count >= 4 else 2
+    
+    if anima_count >= 3:
+        if anima_count >= 10:
+            traits["Anima Squad"] = 10
+        elif anima_count >= 7:
+            traits["Anima Squad"] = 7
+        elif anima_count >= 5:
+            traits["Anima Squad"] = 5
+        else:
+            traits["Anima Squad"] = 3
+    
+    if exotech_count >= 3:
+        if exotech_count >= 10:
+            traits["Exotech"] = 10
+        elif exotech_count >= 7:
+            traits["Exotech"] = 7
+        elif exotech_count >= 5:
+            traits["Exotech"] = 5
+        else:
+            traits["Exotech"] = 3
+    
+    if street_demon_count >= 3:
+        if street_demon_count >= 10:
+            traits["street_demon Hex"] = 10
+        elif street_demon_count >= 7:
+            traits["street_demon Hex"] = 7
+        elif street_demon_count >= 5:
+            traits["street_demon Hex"] = 5
+        else:
+            traits["street_demon Hex"] = 3
+    
+    if syndicate_count >= 3:
+        traits["Syndicate"] = 7 if syndicate_count >= 7 else 5 if syndicate_count >= 5 else 3
+    
+    return traits
+
+
+# Example usage with the team parameter:
+"""
+"""
 def apply_selected_buffs(base_hp, armor, mr, max_hp, time, items=None, traits=None, name=None, signature_hex=False, is_street_demon=False):
     if items is None:
         items = []
@@ -206,12 +266,12 @@ def cast_spell(
         current_hp = min(current_hp + heal, max_hp)
 
     elif name == "Shyvana":
-        hp_increase = [200, 250, 300][star_level - 1] * ap_bonus
+        hp_increase = [200, 250, 300][star_level - 1] * (1+ap_bonus)
         scaled_bonus = hp_increase * (1 + hp_percent_bonus)
         max_hp += scaled_bonus
         current_hp += scaled_bonus
         current_hp = min(current_hp, max_hp)
-        heal_rate = [0.06, 0.08, 0.10][star_level - 1] * ap_bonus + 0.01 * max_hp
+        heal_rate = [0.06, 0.08, 0.10][star_level - 1] * (1+ap_bonus) + 0.01 * max_hp
         spell_effect['heal_per_second'] = heal_rate
         spell_effect['new_max_hp'] = max_hp
 
@@ -231,8 +291,9 @@ def cast_spell(
         spell_effect['duration'] = 4.0
 
     elif name == "Sylas":
-        hp_increase_percent = [1.5, 2.0, 2.5][star_level - 1]
+        hp_increase_percent = [0.015, 0.02, 0.025][star_level - 1]
         new_max_hp = max_hp * (1 + hp_increase_percent * (1 + ap_bonus))
+        current_hp = current_hp+new_max_hp-max_hp
         spell_effect['new_max_hp'] = new_max_hp
 
     elif name == "Skarner":
@@ -312,23 +373,28 @@ def cast_spell(
 
     return current_hp, spell_effect
 
-# Update simulation loop to use StartMana and AS directly from DataFrame
-def simulate_with_spell_system_graph(
+def simulate_tanking(
     name: str,
     star_level: int,
     ap_bonus: float,
     dps: float,
     fight_time: float,
+    enemy_attack_rate: float,
     damage_ratio: List[float],
     source_ratio: List[float],
     items: Optional[List[str]] = None,
     traits: Optional[dict] = None,
+    team: Optional[List[str]] = None,  # Added team parameter
     signature_hex: bool = False,
     is_street_demon: bool = False,
 ):
+    
+    if team is not None:
+        traits = calculate_team_traits(team)
+        
     row = tank_champions_df[tank_champions_df["Name"] == name].iloc[0]
     base_hp, base_armor, base_mr = row["HP"], row["Armor"], row["MR"]
-    attack_speed = row["AS"] if not pd.isna(row["AS"]) else 1.0
+    your_attack_speed = row["AS"]
     start_mana = row["StartMana"]
     mana_max = row["Mana"]
 
@@ -338,11 +404,12 @@ def simulate_with_spell_system_graph(
     hp_multiplier = {1: 1.0, 2: 1.8, 3: 3.24}[star_level]
     max_hp = base_hp * hp_multiplier
 
-    enhanced_max_hp, armor, mr, basic_reduction, bonus_durability, hp_percent_bonus, attack_speed_bonus = apply_selected_buffs(
+    enhanced_max_hp, armor, mr, basic_reduction, _, hp_percent_bonus, attack_speed_bonus = apply_selected_buffs(
         base_hp * hp_multiplier, base_armor, base_mr, max_hp, fight_time,
         items, traits, name, signature_hex, is_street_demon
     )
-    attack_speed *= (1 + attack_speed_bonus)
+    durability_bonus = 0
+    your_attack_speed *= (1 + attack_speed_bonus)
     hp = enhanced_max_hp
 
     heal_per_sec = 0.0
@@ -352,66 +419,150 @@ def simulate_with_spell_system_graph(
     mana_locked_until = 0.0
     hp_log = []
 
-    tick_interval_ms = 100
+    vanguard_triggered = False
+    vanguard_shield = 0.0
+    vanguard_shield_expires = 0.0
+
+    # Simulation timing setup
+    tick_interval_ms = 10
     tick_interval_s = tick_interval_ms / 1000
     num_ticks = int(fight_time * 1000 / tick_interval_ms)
-    damage_per_basic = (dps * fight_time * source_ratio[0]) / (attack_speed * fight_time)
-    damage_per_tick = (dps * fight_time * source_ratio[1]) / num_ticks
-    attack_interval_ticks = max(1, int(1000 / (attack_speed * tick_interval_ms)))
-
+    
+    # Calculate damage values
+    # damage_per_basic is damage per single basic attack from enemy
+    damage_per_basic = (dps * source_ratio[0]) / enemy_attack_rate
+    # damage_per_tick is damage per tick from non-basic attack sources
+    damage_per_tick = (dps * source_ratio[1]) / num_ticks
+    
+    # Track enemy attack timing
+    enemy_attack_interval_ms = 1000 / enemy_attack_rate  # Time between enemy attacks in milliseconds
+    next_enemy_attack_ms = 0  # Time when next enemy attack occurs
+    
+    # Track your champion's attack timing
+    your_attack_interval_ms = 1000 / your_attack_speed  # Time between your attacks in milliseconds
+    next_your_attack_ms = 0  # Time when your next attack occurs
+    
+    # Main simulation loop
     for tick in range(num_ticks):
-        time_sec = tick * tick_interval_s
-
+        current_time_ms = tick * tick_interval_ms
+        time_sec = current_time_ms / 1000
+        
+        # Check if mana lock has expired and shield is gone
         if time_sec >= mana_locked_until and active_shield <= 0:
             mana_locked_until = 0.0
 
-        durability_reduction = 1.0 - bonus_durability
-        if tick % attack_interval_ticks == 0:
-            if time_sec >= mana_locked_until:
-                mana += 10
-        for i, dmg_type in enumerate(["physical", "magic", "true"]):
-            pre_dmg = damage_per_basic * damage_ratio[i]
-            dmg = pre_dmg
-            if dmg_type == "physical":
-                dmg = calc_effective_damage(dmg, armor)
-            elif dmg_type == "magic":
-                dmg = calc_effective_damage(dmg, mr)
-            dmg *= (1 - basic_reduction) * durability_reduction
-            dmg = max(dmg - flat_reduction, 0)
-            
-            if active_shield > 0:
-                absorbed = min(dmg, active_shield)
-                active_shield -= absorbed
-                dmg -= absorbed
-            hp -= dmg
-            if time_sec >= mana_locked_until:
-                mana += 0.01 * pre_dmg + 0.07 * dmg
+        # Calculate shield status for trait bonuses
+        shield_active = active_shield > 0 or (vanguard_triggered and time_sec < vanguard_shield_expires)
+        _, _, _, _, trait_durability, _, _ = get_trait_bonuses(
+            name, traits, time_sec, enhanced_max_hp, shield_active, signature_hex, is_street_demon
+        )
+        durability_reduction = 1.0 - trait_durability
 
+        # Check if your champion attacks - gain mana
+        your_attack_occurs = current_time_ms >= next_your_attack_ms
+        if your_attack_occurs and time_sec >= mana_locked_until:
+            # Reset your attack timer
+            next_your_attack_ms = current_time_ms + your_attack_interval_ms
+            
+            # Gain mana from your basic attack
+            mana += 10
+        
+        # Process damage from enemy for this tick
+        
+        # Check if it's time for an enemy basic attack
+        enemy_attack_occurs = current_time_ms >= next_enemy_attack_ms
+        
+        if enemy_attack_occurs:
+            # Reset enemy attack timer for next attack
+            next_enemy_attack_ms = current_time_ms + enemy_attack_interval_ms
+            
+            # Apply enemy basic attack damage
+            if time_sec >= mana_locked_until:
+                # Process enemy basic attack
+                for i, dmg_type in enumerate(["physical", "magic", "true"]):
+                    pre_dmg = damage_per_basic * damage_ratio[i]
+                    dmg = pre_dmg
+                    
+                    # Apply resistances based on damage type
+                    if dmg_type == "physical":
+                        dmg = calc_effective_damage(dmg, armor)
+                    elif dmg_type == "magic":
+                        dmg = calc_effective_damage(dmg, mr)
+                    
+                    # Apply damage reductions
+                    dmg *= (1 - basic_reduction) * durability_reduction
+                    dmg = max(dmg - flat_reduction, 0)
+                    
+                    # Handle shield absorption
+                    if active_shield > 0:
+                        absorbed = min(dmg, active_shield)
+                        active_shield -= absorbed
+                        dmg -= absorbed
+                    
+                    if vanguard_triggered and time_sec < vanguard_shield_expires:
+                        absorbed = min(dmg, vanguard_shield)
+                        vanguard_shield -= absorbed
+                        dmg -= absorbed
+                    
+                    # Apply damage to HP
+                    hp -= dmg
+                    
+                    # Generate mana from taking damage
+                    if time_sec >= mana_locked_until:
+                        mana += 0.01 *pre_dmg + 0.07 * dmg  # Only gain mana from damage taken, not from damage done
+        
+        # Apply tick-based damage (DoT effects, etc.)
         for i, dmg_type in enumerate(["physical", "magic", "true"]):
             pre_dmg = damage_per_tick * damage_ratio[i]
             dmg = pre_dmg
+            
+            # Apply resistances
             if dmg_type == "physical":
                 dmg = calc_effective_damage(dmg, armor)
             elif dmg_type == "magic":
                 dmg = calc_effective_damage(dmg, mr)
+            
+            # Apply damage reductions (no basic_reduction for tick damage)
             dmg *= durability_reduction
             dmg = max(dmg - flat_reduction, 0)
+            
+            # Handle shield absorption
             if active_shield > 0:
                 absorbed = min(dmg, active_shield)
                 active_shield -= absorbed
                 dmg -= absorbed
+            
+            if vanguard_triggered and time_sec < vanguard_shield_expires:
+                absorbed = min(dmg, vanguard_shield)
+                vanguard_shield -= absorbed
+                dmg -= absorbed
+            
+            # Apply damage to HP
             hp -= dmg
+            
+            # Generate mana from taking damage
             if time_sec >= mana_locked_until:
-                mana += 0.01 * pre_dmg + 0.07 * dmg
-        
-        if items and "DragonsClaw" in items and tick % (2000 // tick_interval_ms) == 0:
+                mana += 0.01 *pre_dmg + 0.07 * dmg 
+                
+        # Apply item-based healing effects
+        if items and "DragonsClaw" in items and tick*tick_interval_ms % 2000 == 0:
             hp += 0.025 * enhanced_max_hp
-        if items and "Redemption" in items and tick % (5000 // tick_interval_ms) == 0:
+        if items and "Redemption" in items and tick*tick_interval_ms % 5000 == 0:
             missing_hp = max(0, enhanced_max_hp - hp)
             hp += 0.15 * missing_hp
 
-        #hp += heal_per_sec * tick_interval_s/1000
+        # Apply continuous healing
+        hp += heal_per_sec * tick_interval_s
 
+        # Vanguard shield trigger at 50% HP
+        if name in vanguard_champions and not vanguard_triggered and hp <= 0.5 * enhanced_max_hp:
+            vanguard_level = traits.get("Vanguard", 0)
+            shield_pct = {2: 0.16, 4: 0.32, 6: 0.40}.get(vanguard_level, 0)
+            vanguard_shield = shield_pct * enhanced_max_hp
+            vanguard_shield_expires = time_sec + 10.0
+            vanguard_triggered = True
+
+        # Cast spell when mana is full
         if mana >= mana_max:
             casts += 1
             mana = 0
@@ -443,14 +594,16 @@ def simulate_with_spell_system_graph(
     plt.show()
 
     return times[-1], casts
-simulate_with_spell_system_graph(
-    name="Shyvana",
+
+simulate_tanking(
+    name="Sylas",  # Primary champion
     star_level=3,
     ap_bonus=0,
-    dps=10000,
+    dps=700,
     fight_time=30,
+    enemy_attack_rate=3,
     damage_ratio=[0.5, 0.25, 0.25],
     source_ratio=[0.3, 0.7],
-    items=[],  # No defenses
-    traits={"Bastion": 2}
+    items=["DragonsClaw", "Redemption", "BrambleVest"],
+    team=["Sylas", "Vayne", "Skarner", "Rhaast", "Jarvan IV", "Illaoi", "Renekton"]
 )
