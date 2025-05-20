@@ -602,14 +602,14 @@ def simulate_tanking(
     return times[-1], casts
 
 simulate_tanking(
-    name="Ekko",  # Primary champion
-    star_level=2,
+    name="Sylas",  # Primary champion
+    star_level=3,
     ap_bonus=0,
-    dps=1500,
+    dps=700,
     fight_time=30,
     enemy_attack_rate=3,
     damage_ratio=[0.5, 0.25, 0.25],
     source_ratio=[0.3, 0.7],
     items=["DragonsClaw", "Redemption", "BrambleVest"],
-    team=["ekko", "neeko", "Sylas", "Vayne", "Skarner", "Rhaast", "Jarvan IV", "Illaoi", "Renekton"]
+    team=["Sylas", "Vayne", "Skarner", "Rhaast", "Jarvan IV", "Illaoi", "Renekton"]
 )
