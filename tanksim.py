@@ -1,6 +1,7 @@
 
-import matplotlib.pyplot as plt
 import pandas as pd
+from typing import List, Optional
+import matplotlib.pyplot as plt
 
 tank_champions_df = pd.DataFrame([
     {"Name": "Nidalee", "HP": 650, "Mana": 60, "StartMana": 20, "Armor": 40, "MR": 40, "AS": 0.75},
@@ -15,7 +16,7 @@ tank_champions_df = pd.DataFrame([
     {"Name": "Galio", "HP": 900, "Mana": 80, "StartMana": 0, "Armor": 50, "MR": 50, "AS": 0.60},
     {"Name": "Vi", "HP": 650, "Mana": 70, "StartMana": 30, "Armor": 40, "MR": 40, "AS": 0.60},
     {"Name": "Gragas", "HP": 850, "Mana": 90, "StartMana": 20, "Armor": 50, "MR": 50, "AS": 0.60},
-    {"Name": "Rhaast", "HP": 700, "Mana": 100, "StartMana": 50, "Armor": 45, "MR": 45, "AS": 0.75},  # AS unknown
+    {"Name": "Rhaast", "HP": 700, "Mana": 100, "StartMana": 50, "Armor": 45, "MR": 45, "AS": 0.75}, 
     {"Name": "Sejuani", "HP": 1000, "Mana": 150, "StartMana": 50, "Armor": 60, "MR": 60, "AS": 0.60},
     {"Name": "Jax", "HP": 650, "Mana": 80, "StartMana": 20, "Armor": 40, "MR": 40, "AS": 0.60},
     {"Name": "Mordekaiser", "HP": 850, "Mana": 80, "StartMana": 30, "Armor": 50, "MR": 50, "AS": 0.60},
@@ -27,12 +28,7 @@ tank_champions_df = pd.DataFrame([
     {"Name": "Braum", "HP": 850, "Mana": 100, "StartMana": 30, "Armor": 50, "MR": 50, "AS": 0.60},
 ])
 
-# Champion lists per trait# Re-import necessary modules after reset
-import pandas as pd
-from typing import List, Optional
-import matplotlib.pyplot as plt
 
-# Champion trait groupings (reloaded)
 bastion_champions = {"Jax", "Poppy", "Illaoi", "Shyvana", "Galio", "Sejuani", "Renekton"}
 vanguard_champions = {"Sylas", "Vi", "Rhaast", "Skarner", "Braum", "Jarvan IV", "Leona"}
 bruiser_champions = {"Alistar", "Dr Mundo", "Darius", "Gragas", "Mordekaiser", "Chogath", "Kobuko"}
@@ -40,7 +36,7 @@ anima_champions = {"Seraphine", "Sylas", "Illaoi", "Vayne", "Yuumi", "Leona", "X
 exotech_champions = {"Jax", "Jhin", "Naafiri", "Mordekaiser", "Varus", "Sejuani", "Zeri"}
 street_demon_champions = {"Dr Mundo", "Zyra", "Ekko", "Jinx", "Rengar", "Brand", "Neeko"}
 syndicate_champions = {"Shaco", "Darius", "Twisted Fate", "Braum", "Miss Fortune"}
-# Update the get_trait_bonuses function to handle the bastion time-scaling
+
 def get_trait_bonuses(
     name: str,
     traits: dict,
@@ -114,7 +110,6 @@ def get_trait_bonuses(
 
     return flat_hp_bonus, percent_hp_bonus, bonus_armor, bonus_mr, bonus_durability, bonus_shield, bonus_attack_speed
 
-# Add a new function to calculate team traits from a list of champions
 def calculate_team_traits(champion_list):
     traits = {}
     
@@ -173,9 +168,6 @@ def calculate_team_traits(champion_list):
     return traits
 
 
-# Example usage with the team parameter:
-"""
-"""
 def apply_selected_buffs(base_hp, armor, mr, max_hp, time, items=None, traits=None, name=None, signature_hex=False, is_street_demon=False):
     if items is None:
         items = []
@@ -242,7 +234,6 @@ def calc_effective_damage(damage: float, resistance: float) -> float:
         return damage * (2 - 100 / (100 - resistance))
 
 
-# Extend cast_spell to include full tank champion spell logic
 def cast_spell(
     name: str,
     star_level: int,
@@ -384,7 +375,7 @@ def simulate_tanking(
     source_ratio: List[float],
     items: Optional[List[str]] = None,
     traits: Optional[dict] = None,
-    team: Optional[List[str]] = None,  # Added team parameter
+    team: Optional[List[str]] = None, 
     signature_hex: bool = False,
     is_street_demon: bool = False,
 ):
@@ -408,7 +399,7 @@ def simulate_tanking(
         base_hp * hp_multiplier, base_armor, base_mr, max_hp, fight_time,
         items, traits, name, signature_hex, is_street_demon
     )
-    durability_bonus = 0
+    
     your_attack_speed *= (1 + attack_speed_bonus)
     hp = enhanced_max_hp
 
