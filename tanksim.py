@@ -36,6 +36,7 @@ anima_champions = {"Seraphine", "Sylas", "Illaoi", "Vayne", "Yuumi", "Leona", "X
 exotech_champions = {"Jax", "Jhin", "Naafiri", "Mordekaiser", "Varus", "Sejuani", "Zeri"}
 street_demon_champions = {"Dr Mundo", "Zyra", "Ekko", "Jinx", "Rengar", "Brand", "Neeko"}
 syndicate_champions = {"Shaco", "Darius", "Twisted Fate", "Braum", "Miss Fortune"}
+strategist_champions = {"Ekko", "LeBlanc", "Neeko", "Yuumi", "Ziggs"}
 
 def get_trait_bonuses(
     name: str,
@@ -69,6 +70,16 @@ def get_trait_bonuses(
         else:
             bonus_armor += 10
             bonus_mr += 10
+     # Add Strategist trait bonuses
+    strategist_level = traits.get("Strategist", 0)
+    if strategist_level > 0:
+        strategist_dmg_amp = {2: 0.07, 3: 0.11, 4: 0.16, 5: 0.20}.get(strategist_level, 0)
+        strategist_durability = {2: 0.05, 3: 0.07, 4: 0.11, 5: 0.14}.get(strategist_level, 0)
+        
+        if name in strategist_champions:
+            bonus_durability += strategist_durability * 3
+        else:
+            bonus_durability += strategist_durability
 
     if name in vanguard_champions:
         if shield_active:
@@ -121,8 +132,12 @@ def calculate_team_traits(champion_list):
     exotech_count = sum(1 for champ in champion_list if champ in exotech_champions)
     street_demon_count = sum(1 for champ in champion_list if champ in street_demon_champions)
     syndicate_count = sum(1 for champ in champion_list if champ in syndicate_champions)
+    strategist_count = sum(1 for champ in champion_list if champ in strategist_champions)
     
     # Add active traits to dictionary
+    if strategist_count > 1:
+        traits["Strategist"] = strategist_count
+
     if bastion_count >= 2:
         traits["Bastion"] = 6 if bastion_count >= 6 else 4 if bastion_count >= 4 else 2
     
@@ -399,7 +414,7 @@ def simulate_tanking(
         base_hp * hp_multiplier, base_armor, base_mr, max_hp, fight_time,
         items, traits, name, signature_hex, is_street_demon
     )
-    
+
     your_attack_speed *= (1 + attack_speed_bonus)
     hp = enhanced_max_hp
 
